@@ -9,6 +9,10 @@ Created to assist [obsidian_dnd_vtt](https://github.com/mehrasmeydani/obsidian_d
 - Go
 - sqlc (for code generation if modifying queries)
 
+## Data Source
+
+This utility requires the JSON datasets from the [5etools-src](https://github.com/5etools-mirror-3/5etools-src) repository to be located in the `data` directory (e.g., `data/languages.json`, `data/conditionsdiseases.json`, and the spells files within `data/spells/`).
+
 ## Building
 
 ```bash
