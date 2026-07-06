@@ -379,11 +379,11 @@ VALUES
 `
 
 type InsertScalingDiceParams struct {
-	SpellName string         `json:"spell_name"`
-	Source    string         `json:"source"`
-	Label     sql.NullString `json:"label"`
-	AtLevel   int64          `json:"at_level"`
-	Dice      string         `json:"dice"`
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+	Label     string `json:"label"`
+	AtLevel   int64  `json:"at_level"`
+	Dice      string `json:"dice"`
 }
 
 func (q *Queries) InsertScalingDice(ctx context.Context, arg InsertScalingDiceParams) error {

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 
 	"main/internal/db"
@@ -21,7 +20,6 @@ func main() {
 	deleteDB := flag.Bool("delete", false, "delete the SQLite database file and exit")
 	flag.Parse()
 
-	// Handle positional argument for directory if provided (for compatibility)
 	if flag.NArg() > 0 {
 		*spellsDir = flag.Arg(0)
 	}
@@ -35,7 +33,6 @@ func main() {
 		return
 	}
 
-	// Connect to the DB (this will also create the directory and execute schema.sql)
 	conn, err := db.Connect(*dbPath, schemaSQL)
 	if err != nil {
 		log.Fatalf("failed to connect/init database: %v", err)

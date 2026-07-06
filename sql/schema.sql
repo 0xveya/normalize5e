@@ -62,10 +62,10 @@ CREATE TABLE IF NOT EXISTS spell_entries (
 CREATE TABLE IF NOT EXISTS spell_scaling_dice (
     spell_name TEXT NOT NULL,
     source TEXT NOT NULL,
-    label TEXT,
+    label TEXT NOT NULL DEFAULT '',
     at_level INTEGER NOT NULL,
     dice TEXT NOT NULL,
-    PRIMARY KEY (spell_name, source, at_level)
+    PRIMARY KEY (spell_name, source, at_level, label)
 );
 
 CREATE TABLE IF NOT EXISTS spell_alt_sources (

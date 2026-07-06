@@ -10,10 +10,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Connect opens a SQLite connection, ensures the directory exists, and initializes the schema.
 func Connect(dbPath string, schemaSQL string) (*sql.DB, error) {
 	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("create db directory: %w", err)
 	}
 
@@ -30,14 +29,12 @@ func Connect(dbPath string, schemaSQL string) (*sql.DB, error) {
 	return conn, nil
 }
 
-// DeleteDB deletes the SQLite database file and any related journal/wal files if they exist.
 func DeleteDB(dbPath string) error {
 	if _, err := os.Stat(dbPath); err == nil {
 		if err := os.Remove(dbPath); err != nil {
 			return fmt.Errorf("remove db file: %w", err)
 		}
 	}
-	// Also check for journal/wal files
 	for _, suffix := range []string{"-journal", "-wal", "-shm"} {
 		path := dbPath + suffix
 		if _, err := os.Stat(path); err == nil {

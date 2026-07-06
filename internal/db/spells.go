@@ -6,12 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"main/internal/sqlc"
 )
-
-// ---------- raw JSON shapes (only the messy nested fields) ----------
 
 type RawSpell struct {
 	Name       string          `json:"name"`
@@ -58,10 +55,7 @@ type RawSpell struct {
 		Entries []json.RawMessage `json:"entries"`
 	} `json:"entriesHigherLevel"`
 
-	ScalingLevelDice *struct {
-		Label   string            `json:"label"`
-		Scaling map[string]string `json:"scaling"`
-	} `json:"scalingLevelDice"`
+	ScalingLevelDice json.RawMessage `json:"scalingLevelDice"`
 
 	Meta struct {
 		Ritual *bool `json:"ritual"`
@@ -85,7 +79,6 @@ type SpellFile struct {
 	Spell []RawSpell `json:"spell"`
 }
 
-// IngestFile reads a spell JSON file and inserts/upserts all spells within it using a transaction.
 func IngestFile(ctx context.Context, conn *sql.DB, path string) (int, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -117,7 +110,6 @@ func IngestFile(ctx context.Context, conn *sql.DB, path string) (int, error) {
 	return len(sf.Spell), nil
 }
 
-// InsertSpell flattens and inserts one spell using sqlc.
 func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 	name, source := sp.Name, sp.Source
 
@@ -148,7 +140,6 @@ func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 		return fmt.Errorf("upsert spells row: %w", err)
 	}
 
-	// --- cast times ---
 	if err := q.DeleteCastTimes(ctx, sqlc.DeleteCastTimesParams{SpellName: name, Source: source}); err != nil {
 		return err
 	}
@@ -165,7 +156,6 @@ func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 		}
 	}
 
-	// --- durations + ends ---
 	if err := q.DeleteDurations(ctx, sqlc.DeleteDurationsParams{SpellName: name, Source: source}); err != nil {
 		return err
 	}
@@ -202,7 +192,6 @@ func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 		}
 	}
 
-	// --- entries (main + higher level), flattened one level deep ---
 	if err := q.DeleteEntries(ctx, sqlc.DeleteEntriesParams{SpellName: name, Source: source}); err != nil {
 		return err
 	}
@@ -215,27 +204,40 @@ func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 		}
 	}
 
-	// --- scaling dice ---
 	if err := q.DeleteScalingDice(ctx, sqlc.DeleteScalingDiceParams{SpellName: name, Source: source}); err != nil {
 		return err
 	}
-	if sp.ScalingLevelDice != nil {
-		for lvl, dice := range sp.ScalingLevelDice.Scaling {
-			var lvlInt int64
-			fmt.Sscanf(lvl, "%d", &lvlInt)
-			if err := q.InsertScalingDice(ctx, sqlc.InsertScalingDiceParams{
-				SpellName: name,
-				Source:    source,
-				Label:     strToNullString(sp.ScalingLevelDice.Label),
-				AtLevel:   lvlInt,
-				Dice:      dice,
-			}); err != nil {
-				return fmt.Errorf("scaling dice: %w", err)
+	if len(sp.ScalingLevelDice) > 0 && string(sp.ScalingLevelDice) != "null" {
+		type scalingLevelDiceItem struct {
+			Label   string            `json:"label"`
+			Scaling map[string]string `json:"scaling"`
+		}
+		var items []scalingLevelDiceItem
+		if err := json.Unmarshal(sp.ScalingLevelDice, &items); err != nil {
+			var single scalingLevelDiceItem
+			if err := json.Unmarshal(sp.ScalingLevelDice, &single); err != nil {
+				return fmt.Errorf("parsing scalingLevelDice: %w", err)
+			}
+			items = []scalingLevelDiceItem{single}
+		}
+
+		for _, item := range items {
+			for lvl, dice := range item.Scaling {
+				var lvlInt int64
+				fmt.Sscanf(lvl, "%d", &lvlInt)
+				if err := q.InsertScalingDice(ctx, sqlc.InsertScalingDiceParams{
+					SpellName: name,
+					Source:    source,
+					Label:     item.Label,
+					AtLevel:   lvlInt,
+					Dice:      dice,
+				}); err != nil {
+					return fmt.Errorf("scaling dice: %w", err)
+				}
 			}
 		}
 	}
 
-	// --- tag fields ---
 	if err := q.DeleteSpellTags(ctx, sqlc.DeleteSpellTagsParams{SpellName: name, Source: source}); err != nil {
 		return err
 	}
@@ -269,7 +271,6 @@ func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 	return nil
 }
 
-// insertEntryBlocks flattens one level of the entries[] tree.
 func insertEntryBlocks(ctx context.Context, q *sqlc.Queries, name, source, section string, entries []json.RawMessage) error {
 	ord := int64(0)
 	var walk func(items []json.RawMessage) error
@@ -315,7 +316,7 @@ func insertEntryBlocks(ctx context.Context, q *sqlc.Queries, name, source, secti
 					return err
 				}
 				ord++
-			default: // "list", "table", or anything else — store the raw block as-is
+			default:
 				blockType := obj.Type
 				if blockType == "" {
 					blockType = "unknown"
@@ -338,8 +339,6 @@ func insertEntryBlocks(ctx context.Context, q *sqlc.Queries, name, source, secti
 	}
 	return walk(entries)
 }
-
-// ---------- helper functions ----------
 
 func toNullInt(val *int64) sql.NullInt64 {
 	if val == nil {
@@ -381,7 +380,6 @@ func nullableStr(s string) *string {
 	return &s
 }
 
-// parseSrd handles srd being: absent, true/false, or a string (renamed SRD name).
 func parseSrd(raw json.RawMessage) (bool, *string) {
 	if len(raw) == 0 || string(raw) == "null" {
 		return false, nil
@@ -397,7 +395,6 @@ func parseSrd(raw json.RawMessage) (bool, *string) {
 	return false, nil
 }
 
-// parseMaterial handles components.m being: absent, a plain string, or an object {text, cost, consume}.
 func parseMaterial(raw json.RawMessage) (matText *string, matCost *int64, consumed bool) {
 	if len(raw) == 0 || string(raw) == "null" {
 		return nil, nil, false
