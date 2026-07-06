@@ -20,6 +20,19 @@ type Querier interface {
 	DeleteLanguageSpeakers(ctx context.Context, arg DeleteLanguageSpeakersParams) error
 	DeleteScalingDice(ctx context.Context, arg DeleteScalingDiceParams) error
 	DeleteSpellTags(ctx context.Context, arg DeleteSpellTagsParams) error
+	GetCondition(ctx context.Context, arg GetConditionParams) (Condition, error)
+	GetConditionEntries(ctx context.Context, arg GetConditionEntriesParams) ([]ConditionEntry, error)
+	GetLanguage(ctx context.Context, arg GetLanguageParams) (Language, error)
+	GetLanguageScript(ctx context.Context, arg GetLanguageScriptParams) (LanguageScript, error)
+	GetLanguageScriptFonts(ctx context.Context, arg GetLanguageScriptFontsParams) ([]string, error)
+	GetLanguageSpeakers(ctx context.Context, arg GetLanguageSpeakersParams) ([]string, error)
+	GetSpell(ctx context.Context, arg GetSpellParams) (Spell, error)
+	GetSpellCastTimes(ctx context.Context, arg GetSpellCastTimesParams) ([]SpellCastTime, error)
+	GetSpellDurationEnds(ctx context.Context, arg GetSpellDurationEndsParams) ([]SpellDurationEnd, error)
+	GetSpellDurations(ctx context.Context, arg GetSpellDurationsParams) ([]SpellDuration, error)
+	GetSpellEntries(ctx context.Context, arg GetSpellEntriesParams) ([]SpellEntry, error)
+	GetSpellScalingDice(ctx context.Context, arg GetSpellScalingDiceParams) ([]SpellScalingDice, error)
+	GetSpellTags(ctx context.Context, arg GetSpellTagsParams) ([]SpellTag, error)
 	GetSpellsByLevel(ctx context.Context, level sql.NullInt64) ([]GetSpellsByLevelRow, error)
 	GetSpellsBySavingThrow(ctx context.Context, tagValue string) ([]GetSpellsBySavingThrowRow, error)
 	InsertAltSource(ctx context.Context, arg InsertAltSourceParams) error

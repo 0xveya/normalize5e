@@ -25,6 +25,67 @@ func (q *Queries) DeleteConditionEntries(ctx context.Context, arg DeleteConditio
 	return err
 }
 
+const getCondition = `-- name: GetCondition :one
+SELECT name, source, page, srd, basic_rules FROM conditions WHERE name = ? AND source = ?
+`
+
+type GetConditionParams struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
+func (q *Queries) GetCondition(ctx context.Context, arg GetConditionParams) (Condition, error) {
+	row := q.db.QueryRowContext(ctx, getCondition, arg.Name, arg.Source)
+	var i Condition
+	err := row.Scan(
+		&i.Name,
+		&i.Source,
+		&i.Page,
+		&i.Srd,
+		&i.BasicRules,
+	)
+	return i, err
+}
+
+const getConditionEntries = `-- name: GetConditionEntries :many
+SELECT condition_name, source, ord, block_type, heading, content FROM condition_entries WHERE condition_name = ? AND source = ? ORDER BY ord
+`
+
+type GetConditionEntriesParams struct {
+	ConditionName string `json:"condition_name"`
+	Source        string `json:"source"`
+}
+
+func (q *Queries) GetConditionEntries(ctx context.Context, arg GetConditionEntriesParams) ([]ConditionEntry, error) {
+	rows, err := q.db.QueryContext(ctx, getConditionEntries, arg.ConditionName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ConditionEntry
+	for rows.Next() {
+		var i ConditionEntry
+		if err := rows.Scan(
+			&i.ConditionName,
+			&i.Source,
+			&i.Ord,
+			&i.BlockType,
+			&i.Heading,
+			&i.Content,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertConditionEntry = `-- name: InsertConditionEntry :exec
 INSERT INTO condition_entries (condition_name, source, ord, block_type, heading, content)
 VALUES (?, ?, ?, ?, ?, ?)

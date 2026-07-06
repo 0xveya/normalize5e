@@ -28,3 +28,16 @@ WHERE script_name = ? AND source = ?;
 -- name: InsertLanguageScriptFont :exec
 INSERT INTO language_script_fonts (script_name, source, font)
 VALUES (?, ?, ?);
+
+-- name: GetLanguage :one
+SELECT * FROM languages WHERE name = ? AND source = ?;
+
+-- name: GetLanguageSpeakers :many
+SELECT speaker FROM language_typical_speakers WHERE language_name = ? AND source = ? ORDER BY speaker;
+
+-- name: GetLanguageScript :one
+SELECT * FROM language_scripts WHERE name = ? AND source = ?;
+
+-- name: GetLanguageScriptFonts :many
+SELECT font FROM language_script_fonts WHERE script_name = ? AND source = ? ORDER BY font;
+

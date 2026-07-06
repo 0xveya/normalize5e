@@ -40,6 +40,110 @@ func (q *Queries) DeleteLanguageSpeakers(ctx context.Context, arg DeleteLanguage
 	return err
 }
 
+const getLanguage = `-- name: GetLanguage :one
+SELECT name, source, page, type, script, srd, basic_rules FROM languages WHERE name = ? AND source = ?
+`
+
+type GetLanguageParams struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
+func (q *Queries) GetLanguage(ctx context.Context, arg GetLanguageParams) (Language, error) {
+	row := q.db.QueryRowContext(ctx, getLanguage, arg.Name, arg.Source)
+	var i Language
+	err := row.Scan(
+		&i.Name,
+		&i.Source,
+		&i.Page,
+		&i.Type,
+		&i.Script,
+		&i.Srd,
+		&i.BasicRules,
+	)
+	return i, err
+}
+
+const getLanguageScript = `-- name: GetLanguageScript :one
+SELECT name, source FROM language_scripts WHERE name = ? AND source = ?
+`
+
+type GetLanguageScriptParams struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
+func (q *Queries) GetLanguageScript(ctx context.Context, arg GetLanguageScriptParams) (LanguageScript, error) {
+	row := q.db.QueryRowContext(ctx, getLanguageScript, arg.Name, arg.Source)
+	var i LanguageScript
+	err := row.Scan(&i.Name, &i.Source)
+	return i, err
+}
+
+const getLanguageScriptFonts = `-- name: GetLanguageScriptFonts :many
+SELECT font FROM language_script_fonts WHERE script_name = ? AND source = ? ORDER BY font
+`
+
+type GetLanguageScriptFontsParams struct {
+	ScriptName string `json:"script_name"`
+	Source     string `json:"source"`
+}
+
+func (q *Queries) GetLanguageScriptFonts(ctx context.Context, arg GetLanguageScriptFontsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getLanguageScriptFonts, arg.ScriptName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var font string
+		if err := rows.Scan(&font); err != nil {
+			return nil, err
+		}
+		items = append(items, font)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getLanguageSpeakers = `-- name: GetLanguageSpeakers :many
+SELECT speaker FROM language_typical_speakers WHERE language_name = ? AND source = ? ORDER BY speaker
+`
+
+type GetLanguageSpeakersParams struct {
+	LanguageName string `json:"language_name"`
+	Source       string `json:"source"`
+}
+
+func (q *Queries) GetLanguageSpeakers(ctx context.Context, arg GetLanguageSpeakersParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getLanguageSpeakers, arg.LanguageName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var speaker string
+		if err := rows.Scan(&speaker); err != nil {
+			return nil, err
+		}
+		items = append(items, speaker)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertLanguageScriptFont = `-- name: InsertLanguageScriptFont :exec
 INSERT INTO language_script_fonts (script_name, source, font)
 VALUES (?, ?, ?)

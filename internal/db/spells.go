@@ -273,8 +273,7 @@ func InsertSpell(ctx context.Context, q *sqlc.Queries, sp RawSpell) error {
 
 func insertEntryBlocks(ctx context.Context, q *sqlc.Queries, name, source, section string, entries []json.RawMessage) error {
 	ord := int64(0)
-	var walk func(items []json.RawMessage) error
-	walk = func(items []json.RawMessage) error {
+	walk := func(items []json.RawMessage) error {
 		for _, raw := range items {
 			var asString string
 			if err := json.Unmarshal(raw, &asString); err == nil {

@@ -77,8 +77,7 @@ func IngestConditionsFile(ctx context.Context, conn *sql.DB, path string) (int, 
 
 func insertConditionEntryBlocks(ctx context.Context, q *sqlc.Queries, name, source string, entries []json.RawMessage) error {
 	ord := int64(0)
-	var walk func(items []json.RawMessage) error
-	walk = func(items []json.RawMessage) error {
+	walk := func(items []json.RawMessage) error {
 		for _, raw := range items {
 			var asString string
 			if err := json.Unmarshal(raw, &asString); err == nil {

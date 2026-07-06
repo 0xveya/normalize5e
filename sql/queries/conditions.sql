@@ -13,3 +13,10 @@ WHERE condition_name = ? AND source = ?;
 -- name: InsertConditionEntry :exec
 INSERT INTO condition_entries (condition_name, source, ord, block_type, heading, content)
 VALUES (?, ?, ?, ?, ?, ?);
+
+-- name: GetCondition :one
+SELECT * FROM conditions WHERE name = ? AND source = ?;
+
+-- name: GetConditionEntries :many
+SELECT * FROM condition_entries WHERE condition_name = ? AND source = ? ORDER BY ord;
+

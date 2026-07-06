@@ -88,8 +88,8 @@ CREATE INDEX IF NOT EXISTS idx_spell_tags_lookup ON spell_tags(tag_type, tag_val
 CREATE TABLE IF NOT EXISTS languages (
     name TEXT NOT NULL,
     source TEXT NOT NULL,
-    page INTEGER,
-    type TEXT,
+    PAGE INTEGER,
+    TYPE TEXT,
     script TEXT,
     srd INTEGER DEFAULT 0,
     basic_rules INTEGER DEFAULT 0,
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS language_script_fonts (
 CREATE TABLE IF NOT EXISTS conditions (
     name TEXT NOT NULL,
     source TEXT NOT NULL,
-    page INTEGER,
+    PAGE INTEGER,
     srd INTEGER DEFAULT 0,
     basic_rules INTEGER DEFAULT 0,
     PRIMARY KEY (name, source)
@@ -135,4 +135,3 @@ CREATE TABLE IF NOT EXISTS condition_entries (
     content TEXT NOT NULL,
     PRIMARY KEY (condition_name, source, ord)
 );
-

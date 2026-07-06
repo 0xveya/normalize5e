@@ -136,6 +136,272 @@ func (q *Queries) DeleteSpellTags(ctx context.Context, arg DeleteSpellTagsParams
 	return err
 }
 
+const getSpell = `-- name: GetSpell :one
+SELECT name, source, level, school, page, srd, srd_name, basic_rules, ritual, range_type, distance_type, distance_amount, comp_verbal, comp_somatic, comp_material, comp_material_text, comp_material_cost, comp_material_consumed FROM spells WHERE name = ? AND source = ?
+`
+
+type GetSpellParams struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
+func (q *Queries) GetSpell(ctx context.Context, arg GetSpellParams) (Spell, error) {
+	row := q.db.QueryRowContext(ctx, getSpell, arg.Name, arg.Source)
+	var i Spell
+	err := row.Scan(
+		&i.Name,
+		&i.Source,
+		&i.Level,
+		&i.School,
+		&i.Page,
+		&i.Srd,
+		&i.SrdName,
+		&i.BasicRules,
+		&i.Ritual,
+		&i.RangeType,
+		&i.DistanceType,
+		&i.DistanceAmount,
+		&i.CompVerbal,
+		&i.CompSomatic,
+		&i.CompMaterial,
+		&i.CompMaterialText,
+		&i.CompMaterialCost,
+		&i.CompMaterialConsumed,
+	)
+	return i, err
+}
+
+const getSpellCastTimes = `-- name: GetSpellCastTimes :many
+SELECT spell_name, source, ord, number, unit, condition FROM spell_cast_time WHERE spell_name = ? AND source = ? ORDER BY ord
+`
+
+type GetSpellCastTimesParams struct {
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+}
+
+func (q *Queries) GetSpellCastTimes(ctx context.Context, arg GetSpellCastTimesParams) ([]SpellCastTime, error) {
+	rows, err := q.db.QueryContext(ctx, getSpellCastTimes, arg.SpellName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpellCastTime
+	for rows.Next() {
+		var i SpellCastTime
+		if err := rows.Scan(
+			&i.SpellName,
+			&i.Source,
+			&i.Ord,
+			&i.Number,
+			&i.Unit,
+			&i.Condition,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSpellDurationEnds = `-- name: GetSpellDurationEnds :many
+SELECT spell_name, source, ord, ends_type FROM spell_duration_ends WHERE spell_name = ? AND source = ?
+`
+
+type GetSpellDurationEndsParams struct {
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+}
+
+func (q *Queries) GetSpellDurationEnds(ctx context.Context, arg GetSpellDurationEndsParams) ([]SpellDurationEnd, error) {
+	rows, err := q.db.QueryContext(ctx, getSpellDurationEnds, arg.SpellName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpellDurationEnd
+	for rows.Next() {
+		var i SpellDurationEnd
+		if err := rows.Scan(
+			&i.SpellName,
+			&i.Source,
+			&i.Ord,
+			&i.EndsType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSpellDurations = `-- name: GetSpellDurations :many
+SELECT spell_name, source, ord, type, amount, time_unit, concentration FROM spell_duration WHERE spell_name = ? AND source = ? ORDER BY ord
+`
+
+type GetSpellDurationsParams struct {
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+}
+
+func (q *Queries) GetSpellDurations(ctx context.Context, arg GetSpellDurationsParams) ([]SpellDuration, error) {
+	rows, err := q.db.QueryContext(ctx, getSpellDurations, arg.SpellName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpellDuration
+	for rows.Next() {
+		var i SpellDuration
+		if err := rows.Scan(
+			&i.SpellName,
+			&i.Source,
+			&i.Ord,
+			&i.Type,
+			&i.Amount,
+			&i.TimeUnit,
+			&i.Concentration,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSpellEntries = `-- name: GetSpellEntries :many
+SELECT spell_name, source, section, ord, block_type, heading, content FROM spell_entries WHERE spell_name = ? AND source = ? ORDER BY section, ord
+`
+
+type GetSpellEntriesParams struct {
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+}
+
+func (q *Queries) GetSpellEntries(ctx context.Context, arg GetSpellEntriesParams) ([]SpellEntry, error) {
+	rows, err := q.db.QueryContext(ctx, getSpellEntries, arg.SpellName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpellEntry
+	for rows.Next() {
+		var i SpellEntry
+		if err := rows.Scan(
+			&i.SpellName,
+			&i.Source,
+			&i.Section,
+			&i.Ord,
+			&i.BlockType,
+			&i.Heading,
+			&i.Content,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSpellScalingDice = `-- name: GetSpellScalingDice :many
+SELECT spell_name, source, label, at_level, dice FROM spell_scaling_dice WHERE spell_name = ? AND source = ? ORDER BY at_level, label
+`
+
+type GetSpellScalingDiceParams struct {
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+}
+
+func (q *Queries) GetSpellScalingDice(ctx context.Context, arg GetSpellScalingDiceParams) ([]SpellScalingDice, error) {
+	rows, err := q.db.QueryContext(ctx, getSpellScalingDice, arg.SpellName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpellScalingDice
+	for rows.Next() {
+		var i SpellScalingDice
+		if err := rows.Scan(
+			&i.SpellName,
+			&i.Source,
+			&i.Label,
+			&i.AtLevel,
+			&i.Dice,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSpellTags = `-- name: GetSpellTags :many
+SELECT spell_name, source, tag_type, tag_value FROM spell_tags WHERE spell_name = ? AND source = ? ORDER BY tag_type, tag_value
+`
+
+type GetSpellTagsParams struct {
+	SpellName string `json:"spell_name"`
+	Source    string `json:"source"`
+}
+
+func (q *Queries) GetSpellTags(ctx context.Context, arg GetSpellTagsParams) ([]SpellTag, error) {
+	rows, err := q.db.QueryContext(ctx, getSpellTags, arg.SpellName, arg.Source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpellTag
+	for rows.Next() {
+		var i SpellTag
+		if err := rows.Scan(
+			&i.SpellName,
+			&i.Source,
+			&i.TagType,
+			&i.TagValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSpellsByLevel = `-- name: GetSpellsByLevel :many
 SELECT
     name,

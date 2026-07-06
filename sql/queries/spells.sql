@@ -191,3 +191,25 @@ INSERT INTO
 VALUES
     (?, ?, ?, ?);
 
+-- name: GetSpell :one
+SELECT * FROM spells WHERE name = ? AND source = ?;
+
+-- name: GetSpellCastTimes :many
+SELECT * FROM spell_cast_time WHERE spell_name = ? AND source = ? ORDER BY ord;
+
+-- name: GetSpellDurations :many
+SELECT * FROM spell_duration WHERE spell_name = ? AND source = ? ORDER BY ord;
+
+-- name: GetSpellDurationEnds :many
+SELECT * FROM spell_duration_ends WHERE spell_name = ? AND source = ?;
+
+-- name: GetSpellEntries :many
+SELECT * FROM spell_entries WHERE spell_name = ? AND source = ? ORDER BY section, ord;
+
+-- name: GetSpellScalingDice :many
+SELECT * FROM spell_scaling_dice WHERE spell_name = ? AND source = ? ORDER BY at_level, label;
+
+-- name: GetSpellTags :many
+SELECT * FROM spell_tags WHERE spell_name = ? AND source = ? ORDER BY tag_type, tag_value;
+
+
