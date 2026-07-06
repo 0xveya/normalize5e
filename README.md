@@ -111,3 +111,47 @@ FROM condition_entries
 WHERE condition_name = 'Blinded'
 ORDER BY ord;
 ```
+
+## Verification & Data Comparison
+
+To verify that the SQLite database accurately reflects the original JSON source files, you can use either Nushell or standard POSIX shell tools.
+
+### Option 1: Using Nushell (Recommended)
+
+Nushell supports reading SQLite databases directly as structured tables, making comparison scripts simple.
+
+#### Verify Spell Ingestion:
+Compare spell names from the `spells-aag.json` file directly against the SQLite database:
+```nushell
+let json_names = (open data/spells/spells-aag.json | get spell.name | sort)
+let db_names = (open data/db/dnd.db | get spells | where source == "AAG" | get name | sort)
+if $json_names == $db_names { echo "Verify: OK" } else { echo "Verify: MISMATCH" }
+```
+
+#### Query Database Tables:
+Nushell lets you query, filter, and inspect database tables directly:
+```nushell
+open data/db/dnd.db | get spells | where LEVEL == 3 and ritual == 1 | select name source school
+```
+
+---
+
+### Option 2: Using standard Shell (Bash + jq + sqlite3)
+
+If you are not using Nushell, you can achieve the same check using standard command-line tools.
+
+#### Verify Spell Ingestion:
+```bash
+# Extract names from JSON and sort
+jq -r '.spell[].name' data/spells/spells-aag.json | sort > json_names.txt
+
+# Extract names from SQLite database and sort
+sqlite3 -list -noheader data/db/dnd.db "SELECT name FROM spells WHERE source = 'AAG' ORDER BY name;" > db_names.txt
+
+# Compare the lists
+diff json_names.txt db_names.txt && echo "Verify: OK" || echo "Verify: MISMATCH"
+
+# Clean up
+rm json_names.txt db_names.txt
+```
+
