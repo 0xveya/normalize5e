@@ -8,6 +8,50 @@ import (
 	"database/sql"
 )
 
+type Condition struct {
+	Name       string        `json:"name"`
+	Source     string        `json:"source"`
+	Page       sql.NullInt64 `json:"page"`
+	Srd        sql.NullInt64 `json:"srd"`
+	BasicRules sql.NullInt64 `json:"basic_rules"`
+}
+
+type ConditionEntry struct {
+	ConditionName string         `json:"condition_name"`
+	Source        string         `json:"source"`
+	Ord           int64          `json:"ord"`
+	BlockType     string         `json:"block_type"`
+	Heading       sql.NullString `json:"heading"`
+	Content       string         `json:"content"`
+}
+
+type Language struct {
+	Name       string         `json:"name"`
+	Source     string         `json:"source"`
+	Page       sql.NullInt64  `json:"page"`
+	Type       sql.NullString `json:"type"`
+	Script     sql.NullString `json:"script"`
+	Srd        sql.NullInt64  `json:"srd"`
+	BasicRules sql.NullInt64  `json:"basic_rules"`
+}
+
+type LanguageScript struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
+type LanguageScriptFont struct {
+	ScriptName string `json:"script_name"`
+	Source     string `json:"source"`
+	Font       string `json:"font"`
+}
+
+type LanguageTypicalSpeaker struct {
+	LanguageName string `json:"language_name"`
+	Source       string `json:"source"`
+	Speaker      string `json:"speaker"`
+}
+
 type Spell struct {
 	Name                 string         `json:"name"`
 	Source               string         `json:"source"`

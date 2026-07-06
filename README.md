@@ -1,6 +1,6 @@
 # normalize5e
 
-Parses 5e JSON spell datasets into a SQLite database. 
+Parses 5e JSON spell, language, and condition datasets into a SQLite database.
 
 Created to assist [obsidian_dnd_vtt](https://github.com/mehrasmeydani/obsidian_dnd_vtt).
 
@@ -25,9 +25,9 @@ go build -o normalize5e main.go
   -delete
     	Delete the SQLite database file and exit
   -list
-    	List available spell files/sources in the directory and exit
+    	List available ingestion targets and spell sources, then exit
   -files string
-    	Comma-separated list of spell sources/filenames to ingest (e.g. "phb,tce")
+    	Comma-separated list of targets to ingest (e.g. "languages", "conditions", "spells", "phb", "tce")
 ```
 
 ### Examples
@@ -37,12 +37,17 @@ List sources:
 ./normalize5e -list
 ```
 
-Ingest all files:
+Ingest all files (spells, languages, and conditions):
 ```bash
 ./normalize5e
 ```
 
-Ingest specific files:
+Ingest only languages and conditions:
+```bash
+./normalize5e -files languages,conditions
+```
+
+Ingest specific spell source files:
 ```bash
 ./normalize5e -files phb,tce
 ```
@@ -61,6 +66,12 @@ Tables:
 - `spell_entries`: Text entries, tables, lists, and subentries.
 - `spell_scaling_dice`: Damage scaling by spell level.
 - `spell_tags`: Damage, saving throw, and condition tags.
+- `languages`: Languages, types, and script associations.
+- `language_typical_speakers`: List of creatures that typically speak each language.
+- `language_scripts`: Written script systems.
+- `language_script_fonts`: Display fonts associated with written script systems.
+- `conditions`: Blinded, Charmed, Exhausted, etc., along with page references.
+- `condition_entries`: Text effects, lists, and tables associated with each condition.
 
 ## Example Queries
 
@@ -72,15 +83,6 @@ WHERE level = 3 AND ritual = 1
 ORDER BY name;
 ```
 
-### Find spells inflicting fire damage:
-```sql
-SELECT DISTINCT s.name, s.source, s.level
-FROM spells s
-JOIN spell_tags t ON t.spell_name = s.name AND t.source = s.source
-WHERE t.tag_type = 'damageInflict' AND t.tag_value = 'fire'
-ORDER BY s.level, s.name;
-```
-
 ### Find concentration spells lasting >= 1 minute:
 ```sql
 SELECT DISTINCT s.name, s.source, d.amount, d.time_unit
@@ -90,18 +92,18 @@ WHERE d.concentration = 1 AND d.time_unit = 'minute'
 ORDER BY d.amount DESC, s.name;
 ```
 
-### Find spells with Verbal & Somatic components but no Material components:
+### Find all standard languages written in the Common script:
 ```sql
-SELECT name, source, level
-FROM spells
-WHERE comp_verbal = 1 AND comp_somatic = 1 AND comp_material = 0
-ORDER BY level, name;
+SELECT name, source, type
+FROM languages
+WHERE script = 'Common' AND type = 'standard'
+ORDER BY name;
 ```
 
-### Find level-scaling dice for Booming Blade:
+### Find the rules/text describing the Blinded condition:
 ```sql
-SELECT at_level, label, dice
-FROM spell_scaling_dice
-WHERE spell_name = 'Booming Blade'
-ORDER BY at_level;
+SELECT ord, block_type, heading, content
+FROM condition_entries
+WHERE condition_name = 'Blinded'
+ORDER BY ord;
 ```

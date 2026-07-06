@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,8 +20,8 @@ func main() {
 	dbPath := flag.String("db", "data/db/dnd.db", "path to SQLite database")
 	spellsDir := flag.String("dir", "data/spells", "directory containing spells-*.json files")
 	deleteDB := flag.Bool("delete", false, "delete the SQLite database file and exit")
-	listSources := flag.Bool("list", false, "list all available spell source files in the spells directory and exit")
-	filesToIngest := flag.String("files", "", "comma-separated list of spell files or source keys to ingest (e.g. 'phb,tce' or 'spells-phb.json')")
+	listSources := flag.Bool("list", false, "list all available ingestion targets and exit")
+	filesToIngest := flag.String("files", "", "comma-separated list of targets to ingest (e.g. 'languages', 'conditions', 'phb', 'tce')")
 	flag.Parse()
 
 	// Handle legacy positional argument for spells directory
@@ -38,6 +39,12 @@ func main() {
 	}
 
 	if *listSources {
+		fmt.Println("Available general ingestion targets:")
+		fmt.Println("  - languages       (file: data/languages.json)")
+		fmt.Println("  - conditions      (file: data/conditionsdiseases.json)")
+		fmt.Println("  - spells          (all spell JSON files in spells directory)")
+		fmt.Println()
+
 		files, err := getAvailableSpellFiles(*spellsDir)
 		if err != nil {
 			log.Fatalf("failed to read spells directory: %v", err)
@@ -58,56 +65,112 @@ func main() {
 	}
 	defer conn.Close()
 
-	var targetFiles []string
+	shouldIngestLanguages := false
+	shouldIngestConditions := false
+	shouldIngestSpells := false
+	var targetSpellFiles []string
+
 	if *filesToIngest != "" {
 		parts := strings.Split(*filesToIngest, ",")
-		available, err := getAvailableSpellFiles(*spellsDir)
+		availableSpells, err := getAvailableSpellFiles(*spellsDir)
 		if err != nil {
-			log.Fatalf("failed to read spells directory: %v", err)
+			log.Fatalf("failed to scan spells: %v", err)
 		}
 
-		fileMap := make(map[string]string)
-		for _, f := range available {
+		spellFileMap := make(map[string]string)
+		for _, f := range availableSpells {
 			base := filepath.Base(f)
-			fileMap[strings.ToLower(base)] = f
+			spellFileMap[strings.ToLower(base)] = f
 
 			short := strings.ToLower(strings.TrimSuffix(strings.TrimPrefix(base, "spells-"), ".json"))
-			fileMap[short] = f
+			spellFileMap[short] = f
 		}
 
 		for _, part := range parts {
 			part = strings.ToLower(strings.TrimSpace(part))
-			if f, ok := fileMap[part]; ok {
-				targetFiles = append(targetFiles, f)
-			} else if f, ok := fileMap["spells-"+part+".json"]; ok {
-				targetFiles = append(targetFiles, f)
+			if part == "languages" || part == "lang" || part == "language" {
+				shouldIngestLanguages = true
+			} else if part == "conditions" || part == "cond" || part == "condition" {
+				shouldIngestConditions = true
+			} else if part == "spells" || part == "spell" {
+				shouldIngestSpells = true
 			} else {
-				log.Fatalf("unknown spell source or file: %s", part)
+				if f, ok := spellFileMap[part]; ok {
+					targetSpellFiles = append(targetSpellFiles, f)
+					shouldIngestSpells = true
+				} else if f, ok := spellFileMap["spells-"+part+".json"]; ok {
+					targetSpellFiles = append(targetSpellFiles, f)
+					shouldIngestSpells = true
+				} else {
+					log.Fatalf("unknown ingestion target: %s", part)
+				}
 			}
 		}
 	} else {
+		// Ingest everything by default
+		shouldIngestLanguages = true
+		shouldIngestConditions = true
+		shouldIngestSpells = true
+	}
+
+	// Resolve spell files if spells should be ingested but none specified
+	if shouldIngestSpells && len(targetSpellFiles) == 0 {
 		var err error
-		targetFiles, err = getAvailableSpellFiles(*spellsDir)
+		targetSpellFiles, err = getAvailableSpellFiles(*spellsDir)
 		if err != nil {
 			log.Fatalf("failed to scan spells: %v", err)
 		}
 	}
 
-	if len(targetFiles) == 0 {
-		log.Fatalf("no spells-*.json files found to ingest in %s", *spellsDir)
+	ctx := context.Background()
+
+	// 1. Ingest Languages
+	if shouldIngestLanguages {
+		langPath := filepath.Join(filepath.Dir(*spellsDir), "languages.json")
+		if _, err := os.Stat(langPath); err == nil {
+			fmt.Printf("Ingesting languages from %s...\n", langPath)
+			nL, nS, err := db.IngestLanguagesFile(ctx, conn, langPath)
+			if err != nil {
+				log.Fatalf("languages ingestion: %v", err)
+			}
+			fmt.Printf("  - Ingested %d languages and %d scripts\n", nL, nS)
+		} else {
+			if *filesToIngest != "" {
+				log.Fatalf("languages file not found at %s", langPath)
+			}
+		}
 	}
 
-	ctx := context.Background()
-	total := 0
-	for _, path := range targetFiles {
-		n, err := db.IngestFile(ctx, conn, path)
-		if err != nil {
-			log.Fatalf("%s: %v", path, err)
+	// 2. Ingest Conditions
+	if shouldIngestConditions {
+		condPath := filepath.Join(filepath.Dir(*spellsDir), "conditionsdiseases.json")
+		if _, err := os.Stat(condPath); err == nil {
+			fmt.Printf("Ingesting conditions from %s...\n", condPath)
+			n, err := db.IngestConditionsFile(ctx, conn, condPath)
+			if err != nil {
+				log.Fatalf("conditions ingestion: %v", err)
+			}
+			fmt.Printf("  - Ingested %d conditions\n", n)
+		} else {
+			if *filesToIngest != "" {
+				log.Fatalf("conditions file not found at %s", condPath)
+			}
 		}
-		fmt.Printf("%s: %d spells ingested\n", filepath.Base(path), n)
-		total += n
 	}
-	fmt.Printf("done, %d spells total ingested\n", total)
+
+	// 3. Ingest Spells
+	if shouldIngestSpells && len(targetSpellFiles) > 0 {
+		total := 0
+		for _, path := range targetSpellFiles {
+			n, err := db.IngestFile(ctx, conn, path)
+			if err != nil {
+				log.Fatalf("%s: %v", path, err)
+			}
+			fmt.Printf("%s: %d spells ingested\n", filepath.Base(path), n)
+			total += n
+		}
+		fmt.Printf("done, %d spells total ingested\n", total)
+	}
 }
 
 func getAvailableSpellFiles(dir string) ([]string, error) {

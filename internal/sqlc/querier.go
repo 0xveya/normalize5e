@@ -12,20 +12,29 @@ import (
 type Querier interface {
 	DeleteAltSources(ctx context.Context, arg DeleteAltSourcesParams) error
 	DeleteCastTimes(ctx context.Context, arg DeleteCastTimesParams) error
+	DeleteConditionEntries(ctx context.Context, arg DeleteConditionEntriesParams) error
 	DeleteDurationEnds(ctx context.Context, arg DeleteDurationEndsParams) error
 	DeleteDurations(ctx context.Context, arg DeleteDurationsParams) error
 	DeleteEntries(ctx context.Context, arg DeleteEntriesParams) error
+	DeleteLanguageScriptFonts(ctx context.Context, arg DeleteLanguageScriptFontsParams) error
+	DeleteLanguageSpeakers(ctx context.Context, arg DeleteLanguageSpeakersParams) error
 	DeleteScalingDice(ctx context.Context, arg DeleteScalingDiceParams) error
 	DeleteSpellTags(ctx context.Context, arg DeleteSpellTagsParams) error
 	GetSpellsByLevel(ctx context.Context, level sql.NullInt64) ([]GetSpellsByLevelRow, error)
 	GetSpellsBySavingThrow(ctx context.Context, tagValue string) ([]GetSpellsBySavingThrowRow, error)
 	InsertAltSource(ctx context.Context, arg InsertAltSourceParams) error
 	InsertCastTime(ctx context.Context, arg InsertCastTimeParams) error
+	InsertConditionEntry(ctx context.Context, arg InsertConditionEntryParams) error
 	InsertDuration(ctx context.Context, arg InsertDurationParams) error
 	InsertDurationEnd(ctx context.Context, arg InsertDurationEndParams) error
 	InsertEntry(ctx context.Context, arg InsertEntryParams) error
+	InsertLanguageScriptFont(ctx context.Context, arg InsertLanguageScriptFontParams) error
+	InsertLanguageSpeaker(ctx context.Context, arg InsertLanguageSpeakerParams) error
 	InsertScalingDice(ctx context.Context, arg InsertScalingDiceParams) error
 	InsertSpellTag(ctx context.Context, arg InsertSpellTagParams) error
+	UpsertCondition(ctx context.Context, arg UpsertConditionParams) error
+	UpsertLanguage(ctx context.Context, arg UpsertLanguageParams) error
+	UpsertLanguageScript(ctx context.Context, arg UpsertLanguageScriptParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 }
 
